@@ -178,10 +178,25 @@ class KatabumpAutoRenew:
         try:
             sleep(3 + random.random())
             logger.info(f"延迟1")
-            # 等待表格至少有一行加载完成
-            tbody = WebDriverWait(self.driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, "//table[@class='table']//tbody"))
-            )
+            start_time = time.time()
+            rows = []
+            max_wait = 60
+ 
+            while time.time() - start_time < max_wait:
+                try:
+                    tbody = driver.find_element(By.XPATH, "//table[@class='table']//tbody")
+                    rows = tbody.find_elements(By.TAG_NAME, "tr")
+                    if len(rows) > 0:
+                        break
+                except NoSuchElementException:
+                    pass
+                time.sleep(1)
+
+            if not rows: 
+                html = driver.page_source
+                logger.info(f"页面 HTML 前2000字符:\n{html[:2000]}")
+                raise Exception("❌ 超时，找不到服务器行或 'See' 链接，可能页面未加载完成")
+        
             logger.info("✅ 表格 tbody 已加载")   
             def wait_for_rows(drv):
                 rows = tbody.find_elements(By.TAG_NAME, "tr")
