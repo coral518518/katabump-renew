@@ -157,10 +157,12 @@ class KatabumpAutoRenew:
     
         url = "https://dashboard.katabump.com/api-client/list-servers"
         resp = s.get(url, timeout=10)
-        if resp.status_code != 200:
-            raise Exception(f"获取服务器列表失败: {resp.status_code}")
-    
-        servers = resp.json()  # [{"id":272614,...}, ...]
+        logger.error(f"Status: {resp.status_code}")
+        logger.error(f"Content:{ resp.text[:500]}") 
+
+        resp.raise_for_status()
+        
+        servers = resp.json()
         if not servers:
             raise Exception("⚠️ 没有服务器可续期")
     
