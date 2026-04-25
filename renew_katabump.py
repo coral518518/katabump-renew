@@ -149,7 +149,30 @@ class KatabumpAutoRenew:
         except Exception as e:
             logger.error(f"❌ {self.masked_user} - [{context}] 验证交互失败: {e}")
             return False
+            
+    def get_servers(driver):
+        # 从 selenium driver 获取 cookies
+        s = requests.Session()
+        for c in driver.get_cookies():
+            s.cookies.set(c['name'], c['value'])
+    
+        url = "https://dashboard.katabump.com/api-client/list-servers"
+        resp = s.get(url, timeout=10)
+        if resp.status_code != 200:
+            raise Exception(f"获取服务器列表失败: {resp.status_code}")
+    
+        servers = resp.json()  # [{"id":272614,...}, ...]
+        if not servers:
+            raise Exception("⚠️ 没有服务器可续期")
+    
+        return servers
 
+    def go_to_edit(driver, server_id):
+        edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
+        driver.get(edit_url)
+        sleep(3 + random.random())  # 页面加载延迟
+        human_delay()
+        
     def process(self):
         logger.info(f"🚀 开始登录账号: {self.masked_user}")
         self.driver.get("https://dashboard.katabump.com/auth/login")
@@ -177,65 +200,13 @@ class KatabumpAutoRenew:
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
         try:
-            sleep(3 + random.random())
-            logger.info(f"延迟1")
-            start_time = time.time()
-            rows = []
-            max_wait = 60
- 
-            while time.time() - start_time < max_wait:
-                try:
-                    tbody = self.driver.find_element(By.XPATH, "//table[@class='table']//tbody")
-                    rows = tbody.find_elements(By.TAG_NAME, "tr")
-                    if len(rows) > 0:
-                        break
-                except NoSuchElementException:
-                    logger.info("⚠️ 未找到表格 tbody")
-                    pass
-                time.sleep(1)
-
-            if not rows: 
-                html = self.driver.page_source
-                logger.info(f"页面 HTML 前2000字符:\n{html[:2000]}")
-                raise Exception("❌ 超时，找不到服务器行或 'See' 链接，可能页面未加载完成")
-        
-            logger.info("✅ 表格 tbody 已加载")   
-            rows = WebDriverWait(self.driver, 30).until(
-                lambda drv: drv.find_elements(By.XPATH, "//table[@class='table']//tbody/tr")
-            )
-            logger.info(f"✅ 表格行加载完成，共 {len(rows)} 行")
- 
-            row = random.choice(rows)
-            manage_btn = row.find_element(By.XPATH, ".//a[contains(text(), 'See')]")
-            # 滚动到元素
-            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
-            
-            sleep(1 + random.random())
-            logger.info(f"延迟")
-            
-            # 尝试点击，最多重试 3 次
-            for attempt in range(3):
-                try:
-                    self.driver.execute_script("arguments[0].click();", manage_btn)
-                    break  # 点击成功
-                except ElementClickInterceptedException:
-                    logger.info(f"⚠️ 点击被拦截，第 {attempt+1} 次重试...")
-                    sleep(0.5 + random.random())
-            else:
-                logger.info("❌ 点击失败，元素可能被覆盖或页面未加载完成")
-        
-            # 额外的人性化延迟
-            if 'human_delay' in globals():
-                human_delay()
-        
-        except TimeoutException:
-            try:
-                tbody_html = driver.find_element(By.XPATH, "//table[@class='table']//tbody").get_attribute("innerHTML")
-                logger.info(f"tbody HTML:\n{tbody_html}")
-            except:
-                logger.warning("无法获取 tbody HTML")
-            raise Exception("❌ 找不到 'See' 链接，可能页面未加载完成")
-            
+            servers = self.get_servers()
+            server = random.choice(servers)
+            server_id = server['id']
+            logger.info(f"🔹 {self.masked_user} - 选择服务器 ID: {server_id} ({server['name']})")
+            self.go_to_edit(server_id)
+        except Exception as e:
+            raise Exception(f"❌ {self.masked_user} - 获取服务器列表或跳转失败: {e}")
         human_delay()
 
         # --- 第四步： Renew Server ---
