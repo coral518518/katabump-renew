@@ -176,21 +176,22 @@ class KatabumpAutoRenew:
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
         try:
+            sleep(3 + random.random())
             logger.info(f"延迟1")
             # 等待表格至少有一行加载完成
             tbody = WebDriverWait(self.driver, 30).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//table[@class='table']//tbody"))
+                EC.presence_of_element_located((By.XPATH, "//table[@class='table']//tbody"))
             )
-            logger.info("✅ 表格 tbody 已加载")
-            rows = WebDriverWait(driver, max_wait).until(
-                lambda d: tbody.find_elements(By.TAG_NAME, "tr") or False
-            )
+            logger.info("✅ 表格 tbody 已加载")   
+            def wait_for_rows(drv):
+                rows = tbody.find_elements(By.TAG_NAME, "tr")
+                return rows if len(rows) > 0 else False
+
+            rows = WebDriverWait(self.driver, 30).until(wait_for_rows)
             logger.info(f"✅ 表格行加载完成，共 {len(rows)} 行")
-            if not rows:
-                raise TimeoutException("❌ 表格没有行，可能服务器列表为空")
-            
-            manage_btn = rows[0].find_element(By.XPATH, ".//a[contains(text(), 'See')]")
-            logger.info(f"延迟3")
+ 
+            row = random.choice(rows)
+            manage_btn = row.find_element(By.XPATH, ".//a[contains(text(), 'See')]")
             # 滚动到元素
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
             
