@@ -15,6 +15,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from dotenv import load_dotenv
+from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, TimeoutException
 
 load_dotenv()
 
@@ -184,25 +185,24 @@ class KatabumpAutoRenew:
  
             while time.time() - start_time < max_wait:
                 try:
-                    tbody = driver.find_element(By.XPATH, "//table[@class='table']//tbody")
+                    tbody = self.driver.find_element(By.XPATH, "//table[@class='table']//tbody")
                     rows = tbody.find_elements(By.TAG_NAME, "tr")
                     if len(rows) > 0:
                         break
                 except NoSuchElementException:
+                    logger.info("⚠️ 未找到表格 tbody")
                     pass
                 time.sleep(1)
 
             if not rows: 
-                html = driver.page_source
+                html = self.driver.page_source
                 logger.info(f"页面 HTML 前2000字符:\n{html[:2000]}")
                 raise Exception("❌ 超时，找不到服务器行或 'See' 链接，可能页面未加载完成")
         
             logger.info("✅ 表格 tbody 已加载")   
-            def wait_for_rows(drv):
-                rows = tbody.find_elements(By.TAG_NAME, "tr")
-                return rows if len(rows) > 0 else False
-
-            rows = WebDriverWait(self.driver, 30).until(wait_for_rows)
+            rows = WebDriverWait(self.driver, 30).until(
+                lambda drv: drv.find_elements(By.XPATH, "//table[@class='table']//tbody/tr")
+            )
             logger.info(f"✅ 表格行加载完成，共 {len(rows)} 行")
  
             row = random.choice(rows)
