@@ -228,7 +228,7 @@ class KatabumpAutoRenew:
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
         try:
-            servers = self.get_servers()
+            servers = self.get_servers_via_selenium()
             server = random.choice(servers)
             server_id = server['id']
             logger.info(f"🔹 {self.masked_user} - 选择服务器 ID: {server_id} ({server['name']})")
