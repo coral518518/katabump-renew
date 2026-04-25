@@ -190,7 +190,7 @@ class KatabumpAutoRenew:
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
             
             sleep(1 + random.random())
-            logger.warning(f"延迟")
+            logger.info(f"延迟")
             
             # 尝试点击，最多重试 3 次
             for attempt in range(3):
@@ -198,10 +198,10 @@ class KatabumpAutoRenew:
                     self.driver.execute_script("arguments[0].click();", manage_btn)
                     break  # 点击成功
                 except ElementClickInterceptedException:
-                    logger.warning(f"⚠️ 点击被拦截，第 {attempt+1} 次重试...")
+                    logger.info(f"⚠️ 点击被拦截，第 {attempt+1} 次重试...")
                     sleep(0.5 + random.random())
             else:
-                logger.error("❌ 点击失败，元素可能被覆盖或页面未加载完成")
+                logger.info("❌ 点击失败，元素可能被覆盖或页面未加载完成")
         
             # 额外的人性化延迟
             if 'human_delay' in globals():
