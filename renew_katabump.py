@@ -180,9 +180,13 @@ class KatabumpAutoRenew:
         # 获取页面文本
         page_text = self.driver.page_source
         match = re.search(r"The server (\d{6}) has been", page_text)
-        server_id = match.group(1) if match else "272614"
-        logger.info(f"🔢 {self.masked_user} - 提取到 Server ID: {server_id}")
-
+        if match:
+            server_id = match.group(1)
+            logger.info(f"🔢 {self.masked_user} - 正常匹配到 Server ID: {server_id}")
+        else:
+            server_id = "272614"
+            logger.warning(f"⚠️ {self.masked_user} - 未匹配到 Server ID，使用默认值: {server_id}")
+        
         # 创建跳转按钮（模拟点击）
         edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
         logger.info(f"🌐 {self.masked_user} - 准备跳转到服务器编辑页: {edit_url}")
@@ -197,6 +201,8 @@ class KatabumpAutoRenew:
         """)
         human_delay()
 
+        page_text_after = self.driver.page_source
+        logger.info(f"📄 {self.masked_user} - 跳转后页面前2000字符: {page_text_after[:2000]}")
         # --- 第四步： Renew Server ---
         logger.info(f"🔄 {self.masked_user} - 准备续期流程...")
         initial_expiry = ""
