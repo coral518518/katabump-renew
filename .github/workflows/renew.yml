@@ -1,0 +1,83 @@
+name: Auto Renew Katabump
+
+on:  
+  schedule:
+    - cron: '29 5 */2 * *'  #  （UTC时间 02:17）
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  auto_renew_katabump:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Interval Check (Strict 4-day cycle)
+        id: check
+        run: |
+          # 如果是手动触发，则跳过检查直接运行
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 生成 0~120 秒随机数
+          DELAY=$(( RANDOM % 121 ))
+          echo "Sleeping for $DELAY seconds..."
+          sleep $DELAY
+    
+          # 计算当前 Unix 天数 (UTC)
+          DAYS=$(( $(date -u +%s) / 86400 ))
+          REMAINDER=$(( $DAYS % 4 ))
+          
+          if [ $REMAINDER -eq 1 ]; then
+            echo "Today is the scheduled day. Starting workflow..."
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "Not today. Skipping (Current remainder: $REMAINDER, Target: 1)."
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Checkout repository
+        if: steps.check.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: steps.check.outputs.run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: steps.check.outputs.run == 'true'
+        run: |
+          pip install -r requirements.txt
+          sudo apt-get update && sudo apt-get install -y xvfb
+          
+      - name: Get Chromium Version
+        if: steps.check.outputs.run == 'true'
+        id: get_version
+        run: |
+          CHROME_VERSION=$(chromium-browser --version 2>/dev/null | grep -oE 'Chromium\s[0-9]+' | grep -oE '[0-9]+')
+          if [ -z "$CHROME_VERSION" ]; then
+            CHROME_VERSION=$(google-chrome --version 2>/dev/null | grep -oE 'Chrome\s[0-9]+' | grep -oE '[0-9]+')
+          fi
+          if [ -z "$CHROME_VERSION" ]; then
+            echo "⚠️ 无法自动检测浏览器版本，使用最新稳定版本。"
+          CHROME_VERSION="144"
+          fi
+          echo "Detected Chrome/Chromium Major Version: $CHROME_VERSION"
+          echo "CHROME_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+
+      - name: Start X Virtual Frame Buffer (Xvfb)
+        if: steps.check.outputs.run == 'true'
+        run: Xvfb :99 -ac &
+
+      - name: Run Script in Stealth Mode (via Xvfb)
+        if: steps.check.outputs.run == 'true'
+        env:
+          ACCOUNTS: ${{ secrets.ACCOUNTS }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          DISPLAY: ':99'
+          HEADLESS: 'false'
+        run: |
+          python renew_katabump.py
