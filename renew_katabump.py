@@ -176,16 +176,21 @@ class KatabumpAutoRenew:
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
         try:
+            logger.info(f"延迟1")
             # 等待表格至少有一行加载完成
-            rows = WebDriverWait(self.driver, 30).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//table[@class='table']//tbody/tr"))
+            tbody = WebDriverWait(self.driver, 30).until(
+                EC.presence_of_all_elements_located((By.XPATH, "//table[@class='table']//tbody"))
             )
-
+            logger.info("✅ 表格 tbody 已加载")
+            rows = WebDriverWait(driver, max_wait).until(
+                lambda d: tbody.find_elements(By.TAG_NAME, "tr") or False
+            )
+            logger.info(f"✅ 表格行加载完成，共 {len(rows)} 行")
             if not rows:
                 raise TimeoutException("❌ 表格没有行，可能服务器列表为空")
             
             manage_btn = rows[0].find_element(By.XPATH, ".//a[contains(text(), 'See')]")
-
+            logger.info(f"延迟3")
             # 滚动到元素
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
             
@@ -208,6 +213,11 @@ class KatabumpAutoRenew:
                 human_delay()
         
         except TimeoutException:
+            try:
+                tbody_html = driver.find_element(By.XPATH, "//table[@class='table']//tbody").get_attribute("innerHTML")
+                logger.info(f"tbody HTML:\n{tbody_html}")
+            except:
+                logger.warning("无法获取 tbody HTML")
             raise Exception("❌ 找不到 'See' 链接，可能页面未加载完成")
             
         human_delay()
