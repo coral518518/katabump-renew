@@ -175,35 +175,35 @@ class KatabumpAutoRenew:
 
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
-		try:
-			# 等待元素出现并可点击
-			manage_btn = WebDriverWait(self.driver, 30).until(
-				EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'See')]"))
-			)
-			
-			# 滚动到元素
-			self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
-			
-			# 人性化随机延迟 1~2 秒
-			sleep(1 + random.random())
-		
-			# 尝试点击，最多重试 3 次
-			for attempt in range(3):
-				try:
-					self.driver.execute_script("arguments[0].click();", manage_btn)
-					break  # 点击成功
-				except ElementClickInterceptedException:
-					logger.warning(f"⚠️ 点击被拦截，第 {attempt+1} 次重试...")
-					sleep(0.5 + random.random())
-			else:
-				logger.error("❌ 点击失败，元素可能被覆盖或页面未加载完成")
-		
-			# 额外的人性化延迟
-			if 'human_delay' in globals():
-				human_delay()
-		
-		except TimeoutException:
-			logger.error("❌ 找不到 'See' 链接，可能页面未加载完成")
+        try:
+            # 等待元素出现并可点击
+            manage_btn = WebDriverWait(self.driver, 30).until(
+                EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'See')]"))
+            )
+            
+            # 滚动到元素
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
+            
+            # 人性化随机延迟 1~2 秒
+            sleep(1 + random.random())
+        
+            # 尝试点击，最多重试 3 次
+            for attempt in range(3):
+                try:
+                    self.driver.execute_script("arguments[0].click();", manage_btn)
+                    break  # 点击成功
+                except ElementClickInterceptedException:
+                    logger.warning(f"⚠️ 点击被拦截，第 {attempt+1} 次重试...")
+                    sleep(0.5 + random.random())
+            else:
+                logger.error("❌ 点击失败，元素可能被覆盖或页面未加载完成")
+        
+            # 额外的人性化延迟
+            if 'human_delay' in globals():
+                human_delay()
+        
+        except TimeoutException:
+            logger.error("❌ 找不到 'See' 链接，可能页面未加载完成")
         human_delay()
 
         # --- 第四步： Renew Server ---
