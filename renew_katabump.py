@@ -176,17 +176,22 @@ class KatabumpAutoRenew:
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
         try:
-            # 等待元素出现并可点击
-            manage_btn = WebDriverWait(self.driver, 30).until(
-                EC.presence_of_element_located((By.XPATH, "//a[contains(text(), 'See')]"))
+            # 等待表格至少有一行加载完成
+            rows = WebDriverWait(self.driver, 30).until(
+                EC.presence_of_all_elements_located((By.XPATH, "//table[@class='table']//tbody/tr"))
             )
+
+            if not rows:
+                raise TimeoutException("❌ 表格没有行，可能服务器列表为空")
             
+            manage_btn = rows[0].find_element(By.XPATH, ".//a[contains(text(), 'See')]")
+
             # 滚动到元素
             self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", manage_btn)
             
-            # 人性化随机延迟 1~2 秒
             sleep(1 + random.random())
-        
+            logger.warning(f"延迟")
+            
             # 尝试点击，最多重试 3 次
             for attempt in range(3):
                 try:
@@ -203,7 +208,7 @@ class KatabumpAutoRenew:
                 human_delay()
         
         except TimeoutException:
-            logger.error("❌ 找不到 'See' 链接，可能页面未加载完成")
+            raise Exception("❌ 找不到 'See' 链接，可能页面未加载完成")
             
         human_delay()
 
