@@ -152,19 +152,24 @@ class KatabumpAutoRenew:
             return False
             
     def get_servers(self):
-        """使用 Selenium 获取服务器列表 JSON"""
+        s = requests.Session()
+        for c in self.driver.get_cookies():
+            s.cookies.set(c['name'], c['value'])
+
+        url = "https://dashboard.katabump.com/api-client/list-servers"
+        resp = s.get(url, timeout=10)
+        if resp.status_code != 200:
+            raise Exception(f"获取服务器列表失败: {resp.status_code}")
+
         try:
-            self.driver.get("https://dashboard.katabump.com/api-client/list-servers")
-            sleep(2000 + random.random() * 1000)  # 页面加载
-            # 页面里可能直接显示 JSON
-            pre = self.driver.find_element(By.TAG_NAME, "pre")
-            content = pre.text
-            servers = json.loads(content)
-            if not servers:
-                raise Exception("⚠️ 没有服务器可续期")
-            return servers
+            servers = resp.json()
         except Exception as e:
-            raise Exception(f"获取服务器列表失败: {e}")
+            raise Exception(f"解析服务器列表失败: {e}")
+
+        if not servers:
+            raise Exception("⚠️ 没有服务器可续期")
+
+        return servers
 
     def go_to_edit(self, server_id):
         """直接跳转到服务器编辑页"""
