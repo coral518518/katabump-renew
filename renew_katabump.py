@@ -204,6 +204,7 @@ class KatabumpAutoRenew:
         
         except TimeoutException:
             logger.error("❌ 找不到 'See' 链接，可能页面未加载完成")
+            
         human_delay()
 
         # --- 第四步： Renew Server ---
