@@ -16,6 +16,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, WebDriverException
 from dotenv import load_dotenv
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, TimeoutException
+import json
 
 load_dotenv()
 
@@ -151,28 +152,29 @@ class KatabumpAutoRenew:
             return False
             
     def get_servers(self):
-        s = requests.Session()
-        for c in self.driver.get_cookies():
-            s.cookies.set(c['name'], c['value'])
-    
-        url = "https://dashboard.katabump.com/api-client/list-servers"
-        resp = s.get(url, timeout=10)
-        logger.error(f"Status: {resp.status_code}")
-        logger.error(f"Content:{ resp.text[:500]}") 
-
-        resp.raise_for_status()
-        
-        servers = resp.json()
-        if not servers:
-            raise Exception("⚠️ 没有服务器可续期")
-    
-        return servers
+        """使用 Selenium 获取服务器列表 JSON"""
+        try:
+            self.driver.get("https://dashboard.katabump.com/api-client/list-servers")
+            sleep(2000 + random.random() * 1000)  # 页面加载
+            # 页面里可能直接显示 JSON
+            pre = self.driver.find_element(By.TAG_NAME, "pre")
+            content = pre.text
+            servers = json.loads(content)
+            if not servers:
+                raise Exception("⚠️ 没有服务器可续期")
+            return servers
+        except Exception as e:
+            raise Exception(f"获取服务器列表失败: {e}")
 
     def go_to_edit(self, server_id):
-        edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
-        self.driver.get(edit_url)
-        sleep(3 + random.random())  # 页面加载延迟
-        human_delay()
+        """直接跳转到服务器编辑页"""
+        try:
+            edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
+            self.driver.get(edit_url)
+            sleep(3000 + random.random() * 2000)
+            human_delay()
+        except Exception as e:
+            raise Exception(f"跳转服务器编辑页失败: {e}")
         
     def process(self):
         logger.info(f"🚀 开始登录账号: {self.masked_user}")
