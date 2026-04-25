@@ -150,10 +150,9 @@ class KatabumpAutoRenew:
             logger.error(f"❌ {self.masked_user} - [{context}] 验证交互失败: {e}")
             return False
             
-    def get_servers(driver):
-        # 从 selenium driver 获取 cookies
+    def get_servers(self):
         s = requests.Session()
-        for c in driver.get_cookies():
+        for c in self.driver.get_cookies():
             s.cookies.set(c['name'], c['value'])
     
         url = "https://dashboard.katabump.com/api-client/list-servers"
@@ -167,9 +166,9 @@ class KatabumpAutoRenew:
     
         return servers
 
-    def go_to_edit(driver, server_id):
+    def go_to_edit(self, server_id):
         edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
-        driver.get(edit_url)
+        self.driver.get(edit_url)
         sleep(3 + random.random())  # 页面加载延迟
         human_delay()
         
