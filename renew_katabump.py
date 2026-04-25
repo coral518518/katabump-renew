@@ -150,60 +150,7 @@ class KatabumpAutoRenew:
         except Exception as e:
             logger.error(f"❌ {self.masked_user} - [{context}] 验证交互失败: {e}")
             return False
-
-    def get_servers_via_selenium(self):
-        js = """
-        return (async () => {
-            const res = await fetch('https://dashboard.katabump.com/api-client/list-servers', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json, text/javascript, */*; q=0.01',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'include'
-            });
-            return await res.text();
-        })();
-        """
-        resp_text = self.driver.execute_async_script(js)  # 注意 execute_async_script
-        try:
-            servers = json.loads(resp_text)
-        except Exception as e:
-            logger.error(f"解析服务器列表失败: {e}")
-            logger.error(f"返回内容前1000字符:\n{resp_text[:3000]}")
-            raise Exception("获取服务器列表失败")
-        return servers
-    
-    def get_servers(self):
-        s = requests.Session()
-        for c in self.driver.get_cookies():
-            s.cookies.set(c['name'], c['value'])
-
-        url = "https://dashboard.katabump.com/api-client/list-servers"
-        resp = s.get(url, timeout=10)
-        if resp.status_code != 200:
-            raise Exception(f"获取服务器列表失败: {resp.status_code}")
-
-        try:
-            servers = resp.json()
-        except Exception as e:
-            raise Exception(f"解析服务器列表失败: {e}")
-
-        if not servers:
-            raise Exception("⚠️ 没有服务器可续期")
-
-        return servers
-
-    def go_to_edit(self, server_id):
-        """直接跳转到服务器编辑页"""
-        try:
-            edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
-            self.driver.get(edit_url)
-            sleep(3000 + random.random() * 2000)
-            human_delay()
-        except Exception as e:
-            raise Exception(f"跳转服务器编辑页失败: {e}")
-        
+  
     def process(self):
         logger.info(f"🚀 开始登录账号: {self.masked_user}")
         self.driver.get("https://dashboard.katabump.com/auth/login")
@@ -230,14 +177,24 @@ class KatabumpAutoRenew:
 
         # --- 第三步： Manage Server ---
         logger.info(f"🎯 {self.masked_user} - 进入服务器详情页...")
-        try:
-            servers = self.get_servers_via_selenium()
-            server = random.choice(servers)
-            server_id = server['id']
-            logger.info(f"🔹 {self.masked_user} - 选择服务器 ID: {server_id} ({server['name']})")
-            self.go_to_edit(server_id)
-        except Exception as e:
-            raise Exception(f"❌ {self.masked_user} - 获取服务器列表或跳转失败: {e}")
+        # 获取页面文本
+        page_text = self.driver.page_source
+        match = re.search(r"The server (\d{6}) has been", page_text)
+        server_id = match.group(1) if match else "272614"
+        logger.info(f"🔢 {self.masked_user} - 提取到 Server ID: {server_id}")
+
+        # 创建跳转按钮（模拟点击）
+        edit_url = f"https://dashboard.katabump.com/servers/edit?id={server_id}"
+        logger.info(f"🌐 {self.masked_user} - 准备跳转到服务器编辑页: {edit_url}")
+
+        # 模拟“See”点击跳转
+        self.driver.execute_script(f"""
+            let btn = document.createElement('button');
+            btn.innerText = 'Go to Edit';
+            btn.onclick = function() {{ window.location.href = '{edit_url}'; }};
+            document.body.appendChild(btn);
+            btn.click();
+        """)
         human_delay()
 
         # --- 第四步： Renew Server ---
