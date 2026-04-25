@@ -153,21 +153,24 @@ class KatabumpAutoRenew:
 
     def get_servers_via_selenium(self):
         js = """
-        return fetch('https://dashboard.katabump.com/api-client/list-servers', {
+        return (async () => {
+            const res = await fetch('https://dashboard.katabump.com/api-client/list-servers', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json, text/javascript, */*; q=0.01',
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'include'
-        }).then(res => res.text());
+            });
+            return await res.text();
+        })();
         """
-        resp_text = self.driver.execute_script(js)
+        resp_text = self.driver.execute_async_script(js)  # 注意 execute_async_script
         try:
             servers = json.loads(resp_text)
         except Exception as e:
             logger.error(f"解析服务器列表失败: {e}")
-            logger.error(f"返回内容前1000字符:\n{resp_text[:1000]}")
+            logger.error(f"返回内容前1000字符:\n{resp_text[:3000]}")
             raise Exception("获取服务器列表失败")
         return servers
     
